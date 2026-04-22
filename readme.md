@@ -1,4 +1,4 @@
-# 🎮 Xbox Account Cracker Pro – Survival Edition
+# 🎮 Xbox Account Cracker Pro
 
 > **WARNING**  
 > This tool is for educational purposes only. how you use this software.
@@ -49,8 +49,8 @@ Any amount is appreciated. Funds go toward hosting, proxy sources, and API acces
 
 ```git clone https://github.com/yourname/xbox-cracker.git
 cd xbox-cracker
-pip install -r requirements.txt```
-
+pip install -r requirements.txt
+```
 ---
 
 ## 📜 License
