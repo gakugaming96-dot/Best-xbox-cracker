@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GG's Xbox Cracker Pro | Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0f1e 0%, #0c1222 100%);
+            color: #00ffcc;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* ASCII Banner */
+        .ascii-banner {
+            background: #000000aa;
+            backdrop-filter: blur(4px);
+            padding: 15px;
+            border-radius: 20px;
+            font-family: monospace;
+            white-space: pre;
+            font-size: 9px;
+            overflow-x: auto;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #0f0;
+            border: 1px solid #00ffcc33;
+            box-shadow: 0 0 20px rgba(0,255,204,0.1);
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        button {
+            background: linear-gradient(90deg, #00ffcc, #0099aa);
+            color: #000;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 15px #00ffcc;
+        }
+
+        /* Stats Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #111827cc;
+            backdrop-filter: blur(8px);
+            border-radius: 24px;
+            padding: 24px;
+            border-left: 5px solid #00ffcc;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            background: #1a2538cc;
+        }
+
+        .card-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+        }
+
+        .value {
+            font-size: 2.8rem;
+            font-weight: bold;
+            margin-top: 8px;
+            word-break: break-word;
+        }
+
+        /* Recent Accounts */
+        .recent-section {
+            background: #00000099;
+            border-radius: 24px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .recent-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border-left: 4px solid #00ffcc;
+            padding-left: 15px;
+        }
+
+        .recent-list {
+            background: #0a0f1e;
+            border-radius: 16px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .recent-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #00ffcc22;
+            color: #bbffdd;
+        }
+
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00ffcc;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="ascii-banner">
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║      ██╗  ██╗██████╗  ██████╗     ██████╗██████╗  █████╗     ║
+║      ╚██╗██╔╝╚════██╗██╔════╝    ██╔════╝██╔══██╗██╔══██╗    ║
+║       ╚███╔╝  █████╔╝███████╗    ██║     ██████╔╝███████║    ║
+║       ██╔██╗ ██╔═══╝ ██╔══██║    ██║     ██╔══██╗██╔══██║    ║
+║      ██╔╝ ██╗███████╗╚██████╔╝    ╚██████╗██║  ██║██║  ██║    ║
+║      ╚═╝  ╚═╝╚══════╝ ╚═════╝      ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝    ║
+║                                                               ║
+║           ███████╗██╗   ██╗██████╗ ██╗██╗   ██╗██╗██╗        ║
+║           ██╔════╝██║   ██║██╔══██╗██║██║   ██║██║██║        ║
+║           ███████╗██║   ██║██████╔╝██║██║   ██║██║██║        ║
+║           ╚════██║██║   ██║██╔══██╗██║╚██╗ ██╔╝██║██║        ║
+║           ███████║╚██████╔╝██║  ██║██║ ╚████╔╝ ██║███████╗   ║
+║           ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝╚══════╝   ║
+║                                                               ║
+║                  100- food | GG's xbox cracker                ║
+╚═══════════════════════════════════════════════════════════════╝
+</div>
+
+<div class="header">
+    <h1>🎮 GG's Xbox Cracker Pro</h1>
+    <button id="startBtn">▶ START CRACKER</button>
+</div>
+
+<div class="grid" id="statsGrid">
+    <div class="card"><div class="card-label">TOTAL CHECKED</div><div class="value" id="totalChecked">0</div></div>
+    <div class="card"><div class="card-label">VALID ACCOUNTS</div><div class="value" id="validAccounts">0</div></div>
+    <div class="card"><div class="card-label">GAMEPASS HITS</div><div class="value" id="gamepassHits">0</div></div>
+    <div class="card"><div class="card-label">STATUS</div><div class="value" id="status">Idle</div></div>
+    <div class="card"><div class="card-label">WORKING PROXIES</div><div class="value" id="proxiesWorking">0</div></div>
+    <div class="card"><div class="card-label">LAST VALID</div><div class="value" id="lastValid">—</div></div>
+</div>
+
+<div class="recent-section">
+    <div class="recent-title">📋 RECENT VALID ACCOUNTS</div>
+    <div class="recent-list" id="recentList">
+        <div style="opacity:0.5;">Waiting for valid accounts...</div>
+    </div>
+</div>
+
+<div class="footer">
+    Made by Killarua (Discord) | © 2025 | ETH: 0x3dEF0419BE1c1248f78ed9e751EF547883a56277
+</div>
+
+<script>
+    const socket = io();
+
+    // Update stats from WebSocket
+    socket.on('stats_update', (data) => {
+        document.getElementById('totalChecked').innerText = data.total_checked;
+        document.getElementById('validAccounts').innerText = data.valid_accounts;
+        document.getElementById('gamepassHits').innerText = data.gamepass_hits;
+        document.getElementById('status').innerText = data.status;
+        document.getElementById('proxiesWorking').innerText = data.proxies_working;
+        document.getElementById('lastValid').innerText = data.last_valid ? data.last_valid.slice(0,19) : '—';
+    });
+
+    socket.on('recent_update', (accounts) => {
+        const container = document.getElementById('recentList');
+        if (!accounts.length) {
+            container.innerHTML = '<div style="opacity:0.5;">No valid accounts yet...</div>';
+            return;
+        }
+        let html = '';
+        accounts.forEach(acc => {
+            html += `<div class="recent-item">📧 ${acc.email}:${acc.pass} <span class="timestamp">${acc.time.slice(0,19)}</span></div>`;
+        });
+        container.innerHTML = html;
+    });
+
+    // Start cracker via API
+    document.getElementById('startBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('startBtn');
+        btn.innerText = '⏳ STARTING...';
+        btn.disabled = true;
+        await fetch('/api/start');
+        setTimeout(() => {
+            btn.innerText = '▶ START CRACKER';
+            btn.disabled = false;
+        }, 2000);
+    });
+
+    // Initial fetch
+    async function fetchInitial() {
+        const statsRes = await fetch('/api/stats');
+        const statsData = await statsRes.json();
+        document.getElementById('totalChecked').innerText = statsData.total_checked;
+        document.getElementById('validAccounts').innerText = statsData.valid_accounts;
+        document.getElementById('gamepassHits').innerText = statsData.gamepass_hits;
+        document.getElementById('status').innerText = statsData.status;
+        document.getElementById('proxiesWorking').innerText = statsData.proxies_working;
+        document.getElementById('lastValid').innerText = statsData.last_valid ? statsData.last_valid.slice(0,19) : '—';
+
+        const recentRes = await fetch('/api/recent');
+        const recentData = await recentRes.json();
+        const container = document.getElementById('recentList');
+        if (!recentData.length) {
+            container.innerHTML = '<div style="opacity:0.5;">No valid accounts yet...</div>';
+        } else {
+            let html = '';
+            recentData.forEach(acc => {
+                html += `<div class="recent-item">📧 ${acc.email}:${acc.pass} <span class="timestamp">${acc.time.slice(0,19)}</span></div>`;
+            });
+            container.innerHTML = html;
+        }
+    }
+    fetchInitial();
+</script>
+</body>
+</html>

