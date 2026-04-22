@@ -3,24 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GG's Xbox Cracker Pro | Dashboard</title>
+    <title>GG's Xbox Cracker Pro | Ultimate Dashboard</title>
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #0a0f1e 0%, #0c1222 100%);
             color: #00ffcc;
             font-family: 'Segoe UI', 'Courier New', monospace;
             padding: 20px;
             min-height: 100vh;
+            transition: all 0.3s ease;
+            overflow-x: hidden;
         }
-
-        /* ASCII Banner */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50px;
+            padding: 8px 16px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            border: 1px solid #00ffcc33;
+            transition: all 0.3s;
+        }
+        .theme-toggle:hover { border-color: #00ffcc; transform: scale(1.05); }
+        body.light {
+            background: linear-gradient(135deg, #e0e0e0 0%, #ffffff 100%);
+            color: #006666;
+        }
+        body.light .card { background: #ffffffcc; color: #006666; }
+        body.light .recent-list { background: #f0f0f0; }
+        body.light .ascii-banner { background: #ffffffaa; color: #006666; }
         .ascii-banner {
             background: #000000aa;
             backdrop-filter: blur(4px);
@@ -35,22 +67,32 @@
             color: #0f0;
             border: 1px solid #00ffcc33;
             box-shadow: 0 0 20px rgba(0,255,204,0.1);
+            animation: glowPulse 3s infinite;
         }
-
-        /* Header */
+        @keyframes glowPulse {
+            0% { box-shadow: 0 0 10px rgba(0,255,204,0.1); }
+            50% { box-shadow: 0 0 30px rgba(0,255,204,0.3); }
+            100% { box-shadow: 0 0 10px rgba(0,255,204,0.1); }
+        }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
             flex-wrap: wrap;
+            gap: 15px;
         }
-
         h1 {
             font-size: 2rem;
             text-shadow: 0 0 10px #00ffcc;
+            animation: textGlow 2s ease-in-out infinite;
         }
-
+        @keyframes textGlow {
+            0% { text-shadow: 0 0 5px #00ffcc; }
+            50% { text-shadow: 0 0 20px #00ffcc; }
+            100% { text-shadow: 0 0 5px #00ffcc; }
+        }
+        .button-group { display: flex; gap: 12px; }
         button {
             background: linear-gradient(90deg, #00ffcc, #0099aa);
             color: #000;
@@ -61,65 +103,70 @@
             font-family: inherit;
             font-weight: bold;
             font-size: 1rem;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
         }
-
-        button:hover {
-            transform: scale(1.02);
-            box-shadow: 0 0 15px #00ffcc;
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
         }
-
-        /* Stats Grid */
+        button:hover::before { width: 300px; height: 300px; }
+        button:hover { transform: scale(1.02); box-shadow: 0 0 15px #00ffcc; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stop-btn { background: linear-gradient(90deg, #ff4444, #cc0000); }
+        .reset-btn { background: linear-gradient(90deg, #ffaa00, #cc8800); }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-
         .card {
             background: #111827cc;
             backdrop-filter: blur(8px);
             border-radius: 24px;
-            padding: 24px;
+            padding: 20px;
             border-left: 5px solid #00ffcc;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
         }
-
-        .card:hover {
-            transform: translateY(-5px);
-            background: #1a2538cc;
+        .card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0,255,204,0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s;
         }
-
-        .card-label {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.7;
-        }
-
-        .value {
-            font-size: 2.8rem;
-            font-weight: bold;
-            margin-top: 8px;
-            word-break: break-word;
-        }
-
-        /* Recent Accounts */
-        .recent-section {
+        .card:hover::after { opacity: 1; }
+        .card:hover { transform: translateY(-5px) scale(1.02); background: #1a2538cc; }
+        .card-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; }
+        .value { font-size: 2rem; font-weight: bold; margin-top: 8px; }
+        .chart-section, .recent-section {
             background: #00000099;
             border-radius: 24px;
             padding: 20px;
-            margin-top: 20px;
+            margin-bottom: 30px;
         }
-
         .recent-title {
             font-size: 1.2rem;
             margin-bottom: 15px;
             border-left: 4px solid #00ffcc;
             padding-left: 15px;
         }
-
         .recent-list {
             background: #0a0f1e;
             border-radius: 16px;
@@ -129,47 +176,59 @@
             font-family: monospace;
             font-size: 13px;
         }
-
         .recent-item {
             padding: 8px 12px;
             border-bottom: 1px solid #00ffcc22;
             color: #bbffdd;
+            animation: slideIn 0.3s ease;
         }
-
-        .recent-item:last-child {
-            border-bottom: none;
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
-
-        .timestamp {
-            color: #888;
-            font-size: 11px;
+        .copy-btn {
+            background: transparent;
+            border: 1px solid #00ffcc;
+            padding: 2px 8px;
+            font-size: 10px;
             margin-left: 10px;
+            border-radius: 20px;
+            cursor: pointer;
         }
-
-        /* Footer */
+        .copy-btn:hover { background: #00ffcc; color: #000; }
         .footer {
             text-align: center;
             margin-top: 40px;
             font-size: 12px;
             opacity: 0.6;
         }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #111;
-        }
-        ::-webkit-scrollbar-thumb {
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
             background: #00ffcc;
-            border-radius: 10px;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 0 20px rgba(0,255,204,0.5);
         }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #00ffcc; border-radius: 10px; }
     </style>
 </head>
 <body>
-
-<div class="ascii-banner">
+    <canvas id="particleCanvas"></canvas>
+    <div class="theme-toggle" id="themeToggle">🌙 Dark / ☀️ Light</div>
+    <div class="container">
+        <div class="ascii-banner">
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
 ║      ██╗  ██╗██████╗  ██████╗     ██████╗██████╗  █████╗     ║
@@ -188,96 +247,177 @@
 ║                                                               ║
 ║                  100- food | GG's xbox cracker                ║
 ╚═══════════════════════════════════════════════════════════════╝
-</div>
-
-<div class="header">
-    <h1>🎮 GG's Xbox Cracker Pro</h1>
-    <button id="startBtn">▶ START CRACKER</button>
-</div>
-
-<div class="grid" id="statsGrid">
-    <div class="card"><div class="card-label">TOTAL CHECKED</div><div class="value" id="totalChecked">0</div></div>
-    <div class="card"><div class="card-label">VALID ACCOUNTS</div><div class="value" id="validAccounts">0</div></div>
-    <div class="card"><div class="card-label">GAMEPASS HITS</div><div class="value" id="gamepassHits">0</div></div>
-    <div class="card"><div class="card-label">STATUS</div><div class="value" id="status">Idle</div></div>
-    <div class="card"><div class="card-label">WORKING PROXIES</div><div class="value" id="proxiesWorking">0</div></div>
-    <div class="card"><div class="card-label">LAST VALID</div><div class="value" id="lastValid">—</div></div>
-</div>
-
-<div class="recent-section">
-    <div class="recent-title">📋 RECENT VALID ACCOUNTS</div>
-    <div class="recent-list" id="recentList">
-        <div style="opacity:0.5;">Waiting for valid accounts...</div>
+        </div>
+        <div class="header">
+            <h1>🎮 GG's Xbox Cracker Pro <span style="font-size:1rem;">[ULTIMATE]</span></h1>
+            <div class="button-group">
+                <button id="startBtn">▶ START</button>
+                <button id="stopBtn" class="stop-btn" disabled>⏹️ STOP</button>
+                <button id="resetBtn" class="reset-btn">🔄 RESET</button>
+            </div>
+        </div>
+        <div class="grid">
+            <div class="card"><div class="card-label">TOTAL CHECKED</div><div class="value" id="totalChecked">0</div></div>
+            <div class="card"><div class="card-label">VALID</div><div class="value" id="validAccounts">0</div></div>
+            <div class="card"><div class="card-label">GAMEPASS HITS</div><div class="value" id="gamepassHits">0</div></div>
+            <div class="card"><div class="card-label">STATUS</div><div class="value" id="status">Idle</div></div>
+            <div class="card"><div class="card-label">PROXIES</div><div class="value" id="proxiesWorking">0</div></div>
+            <div class="card"><div class="card-label">LAST VALID</div><div class="value" id="lastValid">—</div></div>
+            <div class="card"><div class="card-label">SUCCESS RATE</div><div class="value" id="successRate">0%</div></div>
+            <div class="card"><div class="card-label">UPTIME</div><div class="value" id="uptime">00:00:00</div></div>
+        </div>
+        <div class="chart-section">
+            <div class="recent-title">📊 LIVE STATS CHART</div>
+            <canvas id="statsChart"></canvas>
+        </div>
+        <div class="recent-section">
+            <div class="recent-title">📋 RECENT VALID ACCOUNTS <span id="recentCount">(0)</span></div>
+            <div class="recent-list" id="recentList"><div style="opacity:0.5;">Waiting...</div></div>
+        </div>
+        <div class="footer">Made by Killarua (Discord) | © 2025 | ETH: 0x3dEF0419BE1c1248f78ed9e751EF547883a56277</div>
     </div>
-</div>
 
-<div class="footer">
-    Made by Killarua (Discord) | © 2025 | ETH: 0x3dEF0419BE1c1248f78ed9e751EF547883a56277
-</div>
-
-<script>
-    const socket = io();
-
-    // Update stats from WebSocket
-    socket.on('stats_update', (data) => {
-        document.getElementById('totalChecked').innerText = data.total_checked;
-        document.getElementById('validAccounts').innerText = data.valid_accounts;
-        document.getElementById('gamepassHits').innerText = data.gamepass_hits;
-        document.getElementById('status').innerText = data.status;
-        document.getElementById('proxiesWorking').innerText = data.proxies_working;
-        document.getElementById('lastValid').innerText = data.last_valid ? data.last_valid.slice(0,19) : '—';
-    });
-
-    socket.on('recent_update', (accounts) => {
-        const container = document.getElementById('recentList');
-        if (!accounts.length) {
-            container.innerHTML = '<div style="opacity:0.5;">No valid accounts yet...</div>';
-            return;
+    <script>
+        // Particle background
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
-        let html = '';
-        accounts.forEach(acc => {
-            html += `<div class="recent-item">📧 ${acc.email}:${acc.pass} <span class="timestamp">${acc.time.slice(0,19)}</span></div>`;
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.color = `rgba(0, 255, 204, ${Math.random() * 0.3})`;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
+        }
+        for (let i = 0; i < 100; i++) particles.push(new Particle());
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light');
+            localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
         });
-        container.innerHTML = html;
-    });
+        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
 
-    // Start cracker via API
-    document.getElementById('startBtn').addEventListener('click', async () => {
-        const btn = document.getElementById('startBtn');
-        btn.innerText = '⏳ STARTING...';
-        btn.disabled = true;
-        await fetch('/api/start');
-        setTimeout(() => {
-            btn.innerText = '▶ START CRACKER';
-            btn.disabled = false;
-        }, 2000);
-    });
+        // Socket
+        const socket = io();
+        let chart;
+        const chartData = { labels: [], valid: [], total: [] };
+        function initChart() {
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        { label: 'Valid', data: chartData.valid, borderColor: '#00ffcc', backgroundColor: 'rgba(0,255,204,0.1)', tension: 0.4, fill: true },
+                        { label: 'Total Checked', data: chartData.total, borderColor: '#ffaa00', backgroundColor: 'rgba(255,170,0,0.1)', tension: 0.4, fill: true }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#00ffcc' } } }, scales: { y: { grid: { color: '#00ffcc22' }, ticks: { color: '#00ffcc' } }, x: { ticks: { color: '#00ffcc', maxRotation: 45, autoSkip: true } } } }
+            });
+        }
+        initChart();
+        function updateChart(valid, total) {
+            chartData.labels.push(new Date().toLocaleTimeString());
+            chartData.valid.push(valid);
+            chartData.total.push(total);
+            if (chartData.labels.length > 20) { chartData.labels.shift(); chartData.valid.shift(); chartData.total.shift(); }
+            chart.update();
+        }
 
-    // Initial fetch
-    async function fetchInitial() {
-        const statsRes = await fetch('/api/stats');
-        const statsData = await statsRes.json();
-        document.getElementById('totalChecked').innerText = statsData.total_checked;
-        document.getElementById('validAccounts').innerText = statsData.valid_accounts;
-        document.getElementById('gamepassHits').innerText = statsData.gamepass_hits;
-        document.getElementById('status').innerText = statsData.status;
-        document.getElementById('proxiesWorking').innerText = statsData.proxies_working;
-        document.getElementById('lastValid').innerText = statsData.last_valid ? statsData.last_valid.slice(0,19) : '—';
+        // Uptime
+        let startTime = Date.now();
+        setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const h = String(Math.floor(elapsed / 3600)).padStart(2,'0');
+            const m = String(Math.floor((elapsed % 3600)/60)).padStart(2,'0');
+            const s = String(elapsed % 60).padStart(2,'0');
+            document.getElementById('uptime').innerText = `${h}:${m}:${s}`;
+        }, 1000);
 
-        const recentRes = await fetch('/api/recent');
-        const recentData = await recentRes.json();
-        const container = document.getElementById('recentList');
-        if (!recentData.length) {
-            container.innerHTML = '<div style="opacity:0.5;">No valid accounts yet...</div>';
-        } else {
+        function showNotification(msg, isErr=false) {
+            const div = document.createElement('div');
+            div.className = 'notification';
+            div.style.background = isErr ? '#ff4444' : '#00ffcc';
+            div.innerText = msg;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+        function copyToClipboard(text) { navigator.clipboard.writeText(text); showNotification('📋 Copied!'); }
+
+        socket.on('stats_update', (data) => {
+            document.getElementById('totalChecked').innerText = data.total_checked;
+            document.getElementById('validAccounts').innerText = data.valid_accounts;
+            document.getElementById('gamepassHits').innerText = data.gamepass_hits;
+            document.getElementById('status').innerText = data.status;
+            document.getElementById('proxiesWorking').innerText = data.proxies_working;
+            document.getElementById('lastValid').innerText = data.last_valid ? data.last_valid.slice(0,19) : '—';
+            const rate = data.total_checked ? ((data.valid_accounts/data.total_checked)*100).toFixed(2) : 0;
+            document.getElementById('successRate').innerText = `${rate}%`;
+            updateChart(data.valid_accounts, data.total_checked);
+            document.getElementById('startBtn').disabled = (data.status === 'Running');
+            document.getElementById('stopBtn').disabled = (data.status !== 'Running');
+        });
+        socket.on('recent_update', (accounts) => {
+            const container = document.getElementById('recentList');
+            document.getElementById('recentCount').innerText = `(${accounts.length})`;
+            if (!accounts.length) { container.innerHTML = '<div style="opacity:0.5;">No valid accounts yet...</div>'; return; }
             let html = '';
-            recentData.forEach(acc => {
-                html += `<div class="recent-item">📧 ${acc.email}:${acc.pass} <span class="timestamp">${acc.time.slice(0,19)}</span></div>`;
+            accounts.forEach(acc => {
+                html += `<div class="recent-item">📧 ${acc.email}:${acc.pass} <span class="timestamp">${acc.time.slice(0,19)}</span><button class="copy-btn" onclick="copyToClipboard('${acc.email}:${acc.pass}')">Copy</button></div>`;
             });
             container.innerHTML = html;
-        }
-    }
-    fetchInitial();
-</script>
+            new Audio('data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==').play().catch(e=>console.log);
+            showNotification('🎉 NEW VALID ACCOUNT!');
+        });
+
+        document.getElementById('startBtn').onclick = async () => { const r = await fetch('/api/start'); showNotification(await r.text()); };
+        document.getElementById('stopBtn').onclick = async () => { const r = await fetch('/api/stop'); showNotification(await r.text()); };
+        document.getElementById('resetBtn').onclick = async () => { if(confirm('Reset all stats?')){ const r = await fetch('/api/reset'); showNotification(await r.text()); setTimeout(()=>location.reload(),1000); } };
+        fetch('/api/stats').then(r=>r.json()).then(data => {
+            document.getElementById('totalChecked').innerText = data.total_checked;
+            document.getElementById('validAccounts').innerText = data.valid_accounts;
+            document.getElementById('gamepassHits').innerText = data.gamepass_hits;
+            document.getElementById('status').innerText = data.status;
+            document.getElementById('proxiesWorking').innerText = data.proxies_working;
+            document.getElementById('lastValid').innerText = data.last_valid ? data.last_valid.slice(0,19) : '—';
+            const rate = data.total_checked ? ((data.valid_accounts/data.total_checked)*100).toFixed(2) : 0;
+            document.getElementById('successRate').innerText = `${rate}%`;
+            document.getElementById('startBtn').disabled = (data.status === 'Running');
+            document.getElementById('stopBtn').disabled = (data.status !== 'Running');
+        });
+        fetch('/api/recent').then(r=>r.json()).then(accounts => {
+            const container = document.getElementById('recentList');
+            if (!accounts.length) { container.innerHTML = '<div style="opacity:0.5;">No valid accounts yet...</div>'; return; }
+            let html = '';
+            accounts.forEach(acc => { html += `<div class="recent-item">📧 ${acc.email}:${acc.pass} <span class="timestamp">${acc.time.slice(0,19)}</span><button class="copy-btn" onclick="copyToClipboard('${acc.email}:${acc.pass}')">Copy</button></div>`; });
+            container.innerHTML = html;
+        });
+    </script>
 </body>
-</html>
+    </html>
