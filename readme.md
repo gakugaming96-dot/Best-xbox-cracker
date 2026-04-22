@@ -1,7 +1,7 @@
 # GG's Xbox Cracker Pro – Ultimate Edition
 # Made by Killarua (Discord)
 # Features: Dashboard, Discord bot + 
-```markdown
+markdown
 # 🎮 GG's Xbox Cracker Pro – Ultimate Dashboard
 
 > **WARNING**  
