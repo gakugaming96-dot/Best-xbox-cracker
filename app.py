@@ -314,5 +314,7 @@ def webhook_receiver():
 # ---------- MAIN ----------
 if __name__ == '__main__':
     Thread(target=run_discord_bot, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    # For production, use gunicorn instead of socketio.run()
+    # The entry point for gunicorn is the 'app' variable.
+    # Gunicorn will be started via the command line.
+    pass
